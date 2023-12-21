@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,21 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename, 'rb') as image_file:
+        image_data = image_file.read()
+        num_images = int.from_bytes(image_data[4:8])
+        image_array = np.frombuffer(image_data[16:], dtype=np.uint8)
+        image_array = image_array.reshape(num_images, -1)
+        image_array = image_array.astype(np.float32)
+        min_val = image_array.min()
+        max_val = image_array.max()
+        image_array = (image_array - min_val) / (max_val - min_val)
+
+    with gzip.open(label_filename, 'rb') as label_file:
+        label_data = label_file.read()
+        label_array = np.frombuffer(label_data[8:], dtype=np.uint8)
+
+    return image_array, label_array
     ### END YOUR CODE
 
 
@@ -68,7 +82,8 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    return np.mean(np.log(np.sum(np.exp(Z), axis=1)) - np.choose(y, Z.T).T)
+
     ### END YOUR CODE
 
 
@@ -91,7 +106,25 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    index = 0
+    while index < X.shape[0]:
+        X_batch = X[index:index+batch, :]
+        y_batch = y[index:index+batch]
+        index += batch
+        m = X_batch.shape[0]
+
+        Z = np.exp(np.dot(X_batch, theta))
+        Z = Z / np.sum(Z, axis=1).reshape(-1, 1)
+
+        Iy = np.zeros((m, theta.shape[1]))
+        Iy[np.arange(m), y_batch] = 1
+
+        g = np.dot(X_batch.T, Z - Iy) / m
+        theta -= lr * g
+
+        if index == 10:
+            print(theta)
+
     ### END YOUR CODE
 
 
@@ -118,7 +151,31 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    index = 0
+    while index < X.shape[0]:
+        X_batch = X[index:index+batch, :]
+        y_batch = y[index:index+batch]
+        index += batch
+        m = X_batch.shape[0]
+
+        Z1_pre = np.dot(X_batch, W1)
+        zeros = np.zeros(Z1_pre.shape)
+        Z1 = np.maximum(zeros, Z1_pre)
+
+        Iy = np.zeros((m, W2.shape[1]))
+        Iy[np.arange(m), y_batch] = 1
+
+        G2_pre = np.exp(np.dot(Z1, W2))
+        sum = np.sum(G2_pre, axis=1).reshape(-1, 1)
+        G2 = G2_pre / sum
+        G2 = G2 - Iy
+
+        G1 = (Z1 > 0) * np.dot(G2, W2.T)
+
+        g_w1 = np.dot(X_batch.T, G1) / m
+        g_w2 = np.dot(Z1.T, G2) / m
+        W1 -= lr * g_w1
+        W2 -= lr * g_w2
     ### END YOUR CODE
 
 
